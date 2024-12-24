@@ -1,6 +1,45 @@
 <?php
+class Box {
+    protected $when;
+    protected $when_last_key;
+    
+    function __construct() {
+        $this->when = [];
+    }
+    
+    function getWhen() {
+        return $this->when;
+    }
+    
+    function when(string $abstruct) {
+        $this->when_last_key = $abstruct;
+        $this->when[$this->when_last_key] = ['key'=>[],'value'=>[]];
+        return $this;
+    }
+    
+    function needs(string $key) {
+        $this->when[$this->when_last_key]['key'][] = $key;
+        return $this;
+    }
+    
+    function give($value) {
+        if(is_callable($value)) {
+            $value = $value(new MyReflection());
+        }
+        $this->when[$this->when_last_key]['value'][] = $value;
+        return $this;
+    }
+}
 
 class MyReflection {
+    protected $box;
+    protected $when;
+    
+    function __construct(Box $box) {
+        $this->box = $box;
+        $this->when = [];
+    }
+    
     public function make(string $className, $param=[]) {
         $reflectionClass = new \ReflectionClass($className);
         $constructor = $reflectionClass->getConstructor();
@@ -18,6 +57,9 @@ class MyReflection {
                 if(array_key_exists($parameter->getName(), $param)) {
                     $parameterInstance[] = array_shift($param);
                 }
+                elseif($this->isWhen($className)) {
+                    $parameterInstance = array_merge($parameterInstance, $this->when($className, $parameter));
+                }
                 else {
                     $parameterInstance[] = $this->make($parameterClassName);
                 }
@@ -33,8 +75,31 @@ class MyReflection {
                     $parameterInstance[] = array_shift($param);
                 }
             }
+            elseif($this->isWhen($className)) {
+                $parameterInstance = array_merge($parameterInstance, $this->when($className, $parameter));
+            }
         }
         return new $className(...$parameterInstance);
+    }
+    
+    protected function isWhen($className) {
+        return array_key_exists($className, $this->box->getWhen());
+    }
+    
+    protected function when($className, $parameter) {
+        $ret = [];
+        $this->when = $this->box->getWhen()[$className];
+        if(($index = array_search($parameter->getName(), $this->when['key'])) !== false) {
+            if($parameter->isVariadic()) {
+                foreach($this->when['value'][$index] as $val) {
+                    $ret[] = $val;
+                }
+            }
+            else {
+                $ret[] = $this->when['value'][$index];
+            }
+        }
+        return $ret;
     }
     
     public function depen($instance, string $method, $param=[]) {
