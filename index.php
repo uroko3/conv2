@@ -5,9 +5,9 @@ require_once('MyReflection.class.php');
 class A {
     protected $x;
     
-    public function __construct(int $a) {
+    public function __construct(array $a) {
         echo "create A\n";
-        $this->x = $a;
+        $this->x = $a[0];
     }
     
     public function f() {
@@ -24,10 +24,12 @@ class B extends A {
 
 class CC extends CCC {
     protected $a;
+    /**
     function __construct(A $a) {
         echo "create CC\n";
         $this->a = $a;
     }
+    */
     
     function getx() {
         return $this->a->f();
@@ -37,11 +39,13 @@ class CC extends CCC {
 
 
 class CCC {
-    protected $aaa;
+    protected $a, $aa, $aaa;
     function __construct(A $a, A $aa, A $aaa) {
         echo "create CCC\n";
+        $this->a = $a;
+        $this->aa = $aa;
         $this->aaa = $aaa;
-    }
+     }
     
     function getxx() {
         return $this->aaa->f();
@@ -57,21 +61,35 @@ class C extends CC {
     
     function get() {
         echo "call C::get()\n";
+        return $this->getxx();
     }
 }
 
 class XX {
-    function __construct(int $a) {
+    function __construct(array $a) {
         echo "create XX\n";
     }
 }
 
+class Y {
+    function __construct(int $b, int $c) {
+        
+    }
+}
+
 $box = new Box();
-$box->when(A::class)
+$box->when([A::class,XX::class])
 ->needs('a')
-->give(9999);
+->give([11,22,33])
+->when(Y::class)
+->needs('b')
+->give(8888)
+->needs('c')
+->give(7777);
+
+var_dump($box);
 
 $ref = new MyReflection($box);
 $obj = $ref->make(C::class);
-print_r($obj->getxx());
+print_r($obj->get());
 

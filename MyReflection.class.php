@@ -1,24 +1,38 @@
 <?php
 class Box {
     protected $when;
-    protected $when_last_key;
+    protected $when_last_keys;
     
     function __construct() {
         $this->when = [];
+        $this->when_last_keys;
     }
     
     function getWhen() {
         return $this->when;
     }
     
-    function when(string $abstruct) {
-        $this->when_last_key = $abstruct;
-        $this->when[$this->when_last_key] = ['key'=>[],'value'=>[]];
+    function when($abstruct) {
+        $this->when_last_keys = [];
+        if(is_array($abstruct)) {
+            foreach($abstruct as $v) {
+                $this->when_last_keys[] = $v;
+            }
+        }
+        else {
+            $this->when_last_keys[] = $abstruct;
+        }
+        foreach($this->when_last_keys as $key) {
+            $this->when[$key] = ['key'=>[],'value'=>[]];
+        }
+        
         return $this;
     }
     
     function needs(string $key) {
-        $this->when[$this->when_last_key]['key'][] = $key;
+        foreach($this->when_last_keys as $when_key) {
+            $this->when[$when_key]['key'][] = $key;
+        }
         return $this;
     }
     
@@ -26,7 +40,9 @@ class Box {
         if(is_callable($value)) {
             $value = $value(new MyReflection());
         }
-        $this->when[$this->when_last_key]['value'][] = $value;
+        foreach($this->when_last_keys as $key) {
+            $this->when[$key]['value'][] = $value;
+        }
         return $this;
     }
 }
